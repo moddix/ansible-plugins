@@ -24,6 +24,10 @@ try:
 except ImportError:
     raise AnsibleError("Can't lookup cloudformation, boto module not installed")
 
+
+memoized_stacks = {}
+
+
 class LookupModule(LookupBase):
 
     def run(self, terms, variables, **kwargs):
@@ -65,9 +69,12 @@ class LookupModule(LookupBase):
          raise AnsibleError("Either 'output', 'parameter', or 'resource_id' \
              must be specified but not more than one")
 
-      conn = boto.cloudformation.connect_to_region(params['region'],
-            profile_name=params['profile'])
-      stack = conn.describe_stacks(stack_name_or_id=params['stack'])[0]
+      stack = memoized_stacks.get(params['region'] + params['profile'] + params['stack'])
+      if not stack:
+          conn = boto.cloudformation.connect_to_region(params['region'],
+                profile_name=params['profile'])
+          stack = conn.describe_stacks(stack_name_or_id=params['stack'])[0]
+          memoized_stacks[params['region'] + params['profile'] + params['stack']] = stack
 
       if section in ['parameter', 'output']:
          attr = "{0}s".format(section)
