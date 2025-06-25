@@ -73,10 +73,15 @@ class LookupModule(LookupBase):
         stack = memoized_stacks.get(cache_key)
 
         try:
-            if params['profile']:
-                session = boto3.Session(region_name=params['region'], profile_name=params['profile'])
-            else:
+            try:
+                if params['profile']:
+                    session = boto3.Session(region_name=params['region'], profile_name=params['profile'])
+                else:
+                    session = boto3.Session(region_name=params['region'])
+            except botocore.exceptions.ProfileNotFound as e:
+                # try env vars instead
                 session = boto3.Session(region_name=params['region'])
+                
             client = session.client('cloudformation')
 
             if not stack:
